@@ -1,7 +1,7 @@
 // Product icon mapping - uses Simple Icons CDN and other sources
 // Note: Simple Icons CDN format is https://cdn.simpleicons.org/{slug} or https://cdn.simpleicons.org/{slug}/{hexcolor}
-export const getProductIcon = (productName: string): { url: string; bgColor: string; textColor: string } => {
-  const product = productName.toLowerCase();
+export const getProductIcon = (productName?: string): { url: string; bgColor: string; textColor: string } => {
+  const product = (productName || '').toLowerCase();
   
   // AWS Services
   if (product.includes('aws') || product.includes('amazon')) {

@@ -71,6 +71,43 @@ export default function App() {
       console.log('Nodes count:', data.nodes?.length);
       console.log('Edges count:', data.edges?.length);
       
+      // FILTER OUT ALL USER NODES - Force removal on frontend
+      if (data.nodes) {
+        const originalCount = data.nodes.length;
+        data.nodes = data.nodes.filter((node: any) => {
+          const isUserNode = node.type === 'user' || 
+                           (node.product && node.product.toLowerCase().includes('user')) ||
+                           (node.label && (
+                             node.label.toLowerCase().includes('user') || 
+                             node.label.toLowerCase().includes('scientist') ||
+                             node.label.toLowerCase().includes('developer') ||
+                             node.label.toLowerCase().includes('admin')
+                           ));
+          
+          if (isUserNode) {
+            console.log(`🚫 REMOVING USER NODE: ${node.id} - ${node.label} (${node.product})`);
+            return false;
+          }
+          return true;
+        });
+        
+        if (originalCount !== data.nodes.length) {
+          console.log(`✅ Filtered ${originalCount - data.nodes.length} user nodes. Remaining: ${data.nodes.length}`);
+          
+          // Also remove edges that referenced removed user nodes
+          if (data.edges) {
+            const nodeIds = new Set(data.nodes.map((n: any) => n.id));
+            const originalEdgeCount = data.edges.length;
+            data.edges = data.edges.filter((edge: any) => 
+              nodeIds.has(edge.source) && nodeIds.has(edge.target)
+            );
+            if (originalEdgeCount !== data.edges.length) {
+              console.log(`✅ Filtered ${originalEdgeCount - data.edges.length} orphaned edges. Remaining: ${data.edges.length}`);
+            }
+          }
+        }
+      }
+      
       // Log config info
       data.nodes?.forEach((node: any) => {
         if (node.config) {
@@ -236,9 +273,36 @@ Output should be a complete ${format} script that can be deployed.`;
     toast.success('Cleared', { description: 'Ready for new architecture' });
   };
 
+  // Wrapper for architecture updates with detailed logging
+  const handleArchitectureUpdate = (newArchitecture: Architecture | null) => {
+    console.log('=== ARCHITECTURE UPDATE TRIGGERED ===');
+    console.log('New architecture:', JSON.stringify(newArchitecture, null, 2));
+    
+    if (newArchitecture) {
+      console.log('Nodes count:', newArchitecture.nodes?.length);
+      console.log('Nodes data:', newArchitecture.nodes?.map(n => ({ 
+        id: n.id, 
+        label: n.label, 
+        product: n.product, 
+        type: n.type,
+        hasConfig: !!n.config 
+      })));
+    }
+    
+    setArchitecture(newArchitecture);
+  };
+
   return (
     <>
-      <Toaster />
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          style: {
+            zIndex: 9999,
+          },
+          className: 'top-8',
+        }}
+      />
       <div className="h-screen flex flex-col bg-gray-100">
 
         {/* Error Alert */}
@@ -299,7 +363,7 @@ Output should be a complete ${format} script that can be deployed.`;
                 components={architecture?.components}
                 description={architecture?.description}
                 architecture={architecture}
-                onArchitectureUpdate={setArchitecture}
+                onArchitectureUpdate={handleArchitectureUpdate}
                 onClear={() => {
                   setArchitecture(null);
                   setConfigurations({});

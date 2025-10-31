@@ -48,22 +48,33 @@ interface ArchitectureDiagramProps {
 
 // Custom node component with product icon
 function ProductNode({ data, selected }: any) {
-  const iconData = getProductIcon(data.product);
-  const typeColor = getNodeTypeColor(data.type);
+  // Debug logging for ProductNode data
+  console.log('🔍 ProductNode received data:', {
+    id: data?.nodeId,
+    label: data?.label,
+    product: data?.product,
+    type: data?.type,
+    hasConfig: !!data?.config,
+    allData: data
+  });
+  
+  const product = data?.product || data?.label || 'Unknown Service';
+  const iconData = getProductIcon(product);
+  const typeColor = getNodeTypeColor(data?.type || 'other');
   
   // Check if this is an Azure component
-  const isAzure = data.product.toLowerCase().includes('azure') || 
-                  data.product.toLowerCase().includes('microsoft');
+  const isAzure = product.toLowerCase().includes('azure') || 
+                  product.toLowerCase().includes('microsoft');
 
   const handleClick = () => {
     console.log(`\n🖱️ Node clicked!`);
-    console.log(`Product: "${data.product}"`);
-    console.log(`Label: "${data.label}"`);
-    console.log(`Has details handler: ${!!data.onDetailsClick}`);
+    console.log(`Product: "${product}"`);
+    console.log(`Label: "${data?.label || 'No label'}"`);
+    console.log(`Has details handler: ${!!data?.onDetailsClick}`);
     
-    if (data.onDetailsClick) {
-      console.log(`✅ Opening component details for ${data.product}`);
-      data.onDetailsClick(data.product, data.label, data.nodeId);
+    if (data?.onDetailsClick) {
+      console.log(`✅ Opening component details for ${product}`);
+      data.onDetailsClick(product, data?.label || product, data?.nodeId);
     } else {
       console.log(`❌ Details click handler not available`);
     }
@@ -97,7 +108,7 @@ function ProductNode({ data, selected }: any) {
           {iconData.url ? (
             <img 
               src={iconData.url} 
-              alt={data.product}
+              alt={product}
               className="w-10 h-10"
               onError={(e) => {
                 // Fallback if icon fails to load
@@ -112,12 +123,12 @@ function ProductNode({ data, selected }: any) {
         
         {/* Label */}
         <div className="text-center w-full">
-          <div className="text-sm mb-0.5 truncate">{data.label}</div>
-          <div className="text-xs text-muted-foreground truncate">{data.product}</div>
+          <div className="text-sm mb-0.5 truncate">{data?.label || product}</div>
+          <div className="text-xs text-muted-foreground truncate">{product}</div>
         </div>
         
         {/* Pricing Badge (if available) */}
-        {data.pricing && data.pricing.monthlyEstimate !== undefined && data.pricing.monthlyEstimate > 0 && (
+        {data?.pricing && data.pricing.monthlyEstimate !== undefined && data.pricing.monthlyEstimate > 0 && (
           <div className="px-2 py-0.5 rounded-md text-xs bg-blue-100 text-blue-700 border border-blue-300">
             ~${data.pricing.monthlyEstimate.toFixed(0)}/mo
           </div>
@@ -128,7 +139,7 @@ function ProductNode({ data, selected }: any) {
           className="px-2.5 py-0.5 rounded-full text-xs text-white"
           style={{ backgroundColor: typeColor }}
         >
-          {data.type}
+          {data?.type || 'service'}
         </div>
       </div>
     </div>

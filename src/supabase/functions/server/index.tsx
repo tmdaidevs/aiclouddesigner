@@ -52,15 +52,25 @@ AZURE-FIRST PRIORITY:
 
 CRITICAL REQUIREMENTS:
 1. EVERY node MUST be connected - no isolated nodes allowed
-2. Create a clear hierarchical flow from users to backend services
+2. Create a clear data flow architecture showing how data moves between services
 3. EVERY edge MUST have a descriptive label explaining what data/request flows through it
 4. Minimum 6-8 nodes with 8-12 edges showing complete data flow
+
+CRITICAL: NEVER create "user" nodes. This is a technical architecture diagram showing services and data flow only.
+
+DO NOT create any nodes representing people, users, or human actors:
+- NO "Data Scientists" nodes
+- NO "End Users" nodes  
+- NO "Developers" nodes
+- NO "Administrators" nodes
+
+Focus only on Azure services and how data flows between them. Start with data ingestion services (Storage, Event Hubs) or API gateways, not human actors.
 
 You must respond with a JSON object containing:
 1. "nodes": An array of node objects with { "id": "unique-id", "label": "Display Name", "product": "ProductName", "type": "category", "config": {...} }
    - product should be the AZURE-NATIVE product name when possible
-   - type should be one of: "compute", "storage", "database", "messaging", "analytics", "frontend", "gateway", "user", "other"
-   - ALWAYS start with a "user" node for user interaction
+   - type should be one of: "compute", "storage", "database", "messaging", "analytics", "frontend", "gateway", "other"
+   - NEVER create nodes with type "user" - focus on services and data flow only
    - config object (optional for user nodes, recommended for service nodes) with:
      * tier: Service tier (e.g., "Standard", "Premium")
      * skuName: SKU/size (e.g., "S1", "P1v2")
@@ -79,75 +89,76 @@ You must respond with a JSON object containing:
 3. "description": A detailed explanation of the architecture (2-3 paragraphs)
 4. "components": An array of key product names used
 
-Azure-Native Product Names (USE THESE):
-- Compute: "Azure Functions", "Azure App Service", "Azure Container Apps", "Azure Kubernetes Service"
-- Storage: "Azure Blob Storage", "Azure Data Lake Storage", "Azure Files"
-- Databases: "Azure SQL Database", "Azure Cosmos DB", "Azure Database for PostgreSQL", "Azure Cache for Redis"
-- Analytics: "Azure Databricks", "Azure Synapse Analytics", "Azure Data Factory", "Azure Stream Analytics"
-- Messaging: "Azure Event Hubs", "Azure Service Bus", "Azure Event Grid"
-- Gateway/CDN: "Azure API Management", "Azure Application Gateway", "Azure Front Door"
-- AI/ML: "Azure OpenAI Service", "Azure Machine Learning", "Azure Cognitive Services"
+AZURE SERVICE NAMING GUIDELINES:
+- Use official Azure service names (e.g., "Azure Functions", "Azure SQL Database", "Azure Cosmos DB")
+- For Azure-managed versions of third-party services, use "Azure [ServiceName]" format (e.g., "Azure Database for PostgreSQL", "Azure Cache for Redis")
+- Choose the most appropriate Azure service for each requirement based on your current knowledge
+- Prefer Azure-native solutions over third-party alternatives when equivalent functionality exists
 
-Example:
+ARCHITECTURAL BEST PRACTICES - Be thoughtful and provide clear reasoning:
+- Use whatever services best fit the specific requirements - there are no strict rules against combining services
+- When selecting multiple similar services, provide thoughtful rationale explaining why each is needed
+- Consider factors like performance, scalability, cost, and integration when making service choices
+- Feel free to use both modern and legacy services if they serve different purposes in the architecture
+- Focus on creating architectures that solve real business problems rather than following rigid patterns
+- NEVER use "Azure Synapse Analytics" - prefer Microsoft Fabric, Azure SQL Database, or other modern analytics services instead
+- NEVER use "Azure Data Factory" - prefer Microsoft Fabric as it includes comprehensive data integration and transformation capabilities
+
+Example for DATA PROCESSING (no users):
 {
   "nodes": [
-    {"id": "users", "label": "End Users", "product": "User", "type": "user"},
     {
-      "id": "api", 
-      "label": "API Gateway", 
-      "product": "Azure API Management", 
-      "type": "gateway",
+      "id": "datasource", 
+      "label": "Data Source", 
+      "product": "Azure Blob Storage", 
+      "type": "storage",
+      "config": {
+        "tier": "Hot",
+        "region": "East US",
+        "rationale": "Ingestion point for raw data files.",
+        "technicalDetails": "Stores incoming data files for processing.",
+        "features": ["Versioning", "Lifecycle management", "Access tiers"],
+        "useCases": ["Data ingestion", "Raw data storage"],
+        "bestPractices": ["Use lifecycle policies", "Enable soft delete"]
+      }
+    },
+    {
+      "id": "processor", 
+      "label": "Data Processor", 
+      "product": "Azure Databricks", 
+      "type": "analytics",
       "config": {
         "tier": "Standard",
-        "skuName": "S1",
         "region": "East US",
-        "rationale": "Provides API management and security.",
-        "technicalDetails": "Entry point with authentication and rate limiting.",
-        "features": ["API throttling", "OAuth 2.0", "Versioning", "Caching"],
-        "useCases": ["API gateway", "Rate limiting"],
-        "bestPractices": ["Enable caching", "Use versioning"]
+        "rationale": "Processes and transforms raw data.",
+        "technicalDetails": "Spark-based data processing and transformation.",
+        "features": ["Auto-scaling", "Collaborative notebooks", "Delta Lake"],
+        "useCases": ["ETL processing", "Data transformation"],
+        "bestPractices": ["Use auto-scaling", "Optimize Spark jobs"]
       }
     },
     {
-      "id": "functions", 
-      "label": "Business Logic", 
-      "product": "Azure Functions", 
-      "type": "compute",
-      "config": {
-        "tier": "Premium",
-        "skuName": "EP1",
-        "region": "East US",
-        "rationale": "Serverless compute with auto-scaling.",
-        "technicalDetails": "Processes requests and coordinates services.",
-        "features": ["Auto-scaling", "VNET integration", "Premium performance"],
-        "useCases": ["API handlers", "Job processing"],
-        "bestPractices": ["Keep stateless", "Use async patterns"]
-      }
-    },
-    {
-      "id": "db", 
-      "label": "Database", 
-      "product": "Azure Database for PostgreSQL", 
+      "id": "warehouse", 
+      "label": "Data Warehouse", 
+      "product": "Azure Synapse Analytics", 
       "type": "database",
       "config": {
-        "tier": "General Purpose",
-        "skuName": "GP_Gen5_2",
+        "tier": "DW100c",
         "region": "East US",
-        "rationale": "Managed PostgreSQL for transactional data.",
-        "technicalDetails": "Stores persistent data with backups.",
-        "features": ["Automated backups", "High availability", "Encryption"],
-        "useCases": ["Transactional storage", "Complex queries"],
-        "bestPractices": ["Use connection pooling", "Index key columns"]
+        "rationale": "Stores processed data for analytics.",
+        "technicalDetails": "Columnar storage optimized for analytics queries.",
+        "features": ["Massively parallel processing", "Elastic scaling"],
+        "useCases": ["Data warehousing", "Analytics queries"],
+        "bestPractices": ["Use distribution keys", "Optimize table design"]
       }
     }
   ],
   "edges": [
-    {"source": "users", "target": "api", "label": "HTTPS Requests"},
-    {"source": "api", "target": "functions", "label": "REST API Calls"},
-    {"source": "functions", "target": "db", "label": "SQL Queries"}
+    {"source": "datasource", "target": "processor", "label": "Raw Data Files"},
+    {"source": "processor", "target": "warehouse", "label": "Processed Data"}
   ],
-  "description": "Modern serverless architecture with API gateway, compute functions, and managed database.",
-  "components": ["Azure API Management", "Azure Functions", "Azure Database for PostgreSQL"]
+  "description": "Data processing pipeline that ingests raw data, processes it, and stores results.",
+  "components": ["Azure Blob Storage", "Azure Databricks", "Azure Synapse Analytics"]
 }`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
