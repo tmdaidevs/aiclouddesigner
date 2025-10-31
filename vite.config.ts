@@ -52,7 +52,17 @@
     },
     build: {
       target: 'esnext',
-      outDir: 'build',
+      outDir: 'dist',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            radix: ['@radix-ui/react-accordion', '@radix-ui/react-alert-dialog', '@radix-ui/react-dialog'],
+            flow: ['reactflow', 'dagre']
+          }
+        }
+      },
+      chunkSizeWarningLimit: 1000
     },
     server: {
       port: 3000,
