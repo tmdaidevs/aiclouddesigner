@@ -295,20 +295,40 @@ export function ChatPanel({
             <p className="text-xs text-muted-foreground">
               Press Enter to send, Shift+Enter for new line
             </p>
-            <Button 
-              type="submit" 
-              disabled={isLoading || !input.trim()}
-              size="sm"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Generate
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setMessages([]);
+                  setInput('');
+                  toast.success('Chat Cleared', { 
+                    description: 'Chat history has been cleared',
+                    duration: 2000
+                  });
+                }}
+                disabled={isLoading}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Chat
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isLoading || !input.trim()}
+                size="sm"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Generate
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </div>
