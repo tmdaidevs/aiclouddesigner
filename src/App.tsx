@@ -8,7 +8,7 @@ import { AlertCircle, X } from 'lucide-react';
 import { projectId, publicAnonKey } from './utils/supabase/info';
 import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/sonner';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Architecture {
   id: string;
@@ -116,47 +116,98 @@ export default function App() {
     setIsExporting(true);
 
     try {
-      console.log(`Generating ${format} template...`);
+      console.log(`Generating ${format} template from nodes using AI...`);
       
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-f62db522/api/generate-iac`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({
-            nodes: architecture.nodes,
-            edges: architecture.edges,
-            format,
-            configurations: configurations,
-          }),
-        }
-      );
+      // Create prompt from nodes - just like ChatGPT example
+      const nodeDescriptions = architecture.nodes.map(node => {
+        return `${node.product}: ${node.label}${node.config ? ` (${JSON.stringify(node.config)})` : ''}`;
+      }).join('\n');
+
+      const prompt = `Generate a ${format} script for the following Azure architecture:
+
+${nodeDescriptions}
+
+Requirements:
+- Create actual Azure resources (not just resource groups)
+- Include proper resource configurations
+- Use best practices for ${format}
+- Include resource dependencies and connections
+- Make it production-ready
+
+Output should be a complete ${format} script that can be deployed.`;
+
+      console.log('Sending prompt to AI:', prompt);
+
+      // Use OpenAI directly for infrastructure generation
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error('OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in your .env file.');
+      }
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert Azure infrastructure architect. Generate only the ${format} code without any explanations, markdown formatting, or code blocks. Return raw ${format} code that can be directly saved to a file.`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000
+        })
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate template');
+        throw new Error(`OpenAI API Error: ${errorData.error?.message || 'Failed to generate template'}`);
       }
 
       const data = await response.json();
       
       console.log(`Generated ${format} template:`, data);
 
+      // Extract the script content from OpenAI response
+      let scriptContent = '';
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        scriptContent = data.choices[0].message.content.trim();
+        
+        // Remove any markdown code block markers if present
+        scriptContent = scriptContent
+          .replace(/^```[a-z]*\n?/, '')
+          .replace(/\n?```$/, '')
+          .trim();
+      } else {
+        throw new Error('Unexpected response format from AI');
+      }
+
+      // Create filename based on format
+      const fileExtension = format === 'terraform' ? 'tf' : format === 'bicep' ? 'bicep' : 'json';
+      const filename = `azure-infrastructure.${fileExtension}`;
+
       // Create a download
-      const blob = new Blob([data.code], { type: 'text/plain' });
+      const blob = new Blob([scriptContent], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = data.filename;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
       toast.success(`${format.toUpperCase()} Generated`, {
-        description: `Downloaded ${data.filename} (${(data.size / 1024).toFixed(1)} KB)`,
+        description: `Downloaded ${filename} (${(scriptContent.length / 1024).toFixed(1)} KB)`,
         duration: 4000,
       });
 
